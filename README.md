@@ -28,6 +28,12 @@ tar -xvzf ernie_base.tar.gz
 ```
 Store the content of ernie_base in pretrained_models/ernie/
 
+## Tokens
+
+Add your tokens in a tokens.py file located in the canlpy/helpers folder
+
+### Tagme
+Token name is TAGME_TOKEN
 
 ## Tests
 
