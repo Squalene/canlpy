@@ -29,6 +29,6 @@ tar -xvzf ernie_base.tar.gz
 Store the content of ernie_base in pretrained_models/ernie/
 
 
-### Tests
+## Tests
 
 Tests can be run directly using python, eg: ```python3 -v ernie_test.py```
