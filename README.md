@@ -1,0 +1,1 @@
+```Run pip install -e . ``` in the home directory to setup the project
