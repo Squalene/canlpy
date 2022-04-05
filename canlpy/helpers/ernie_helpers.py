@@ -1,13 +1,15 @@
 from canlpy.core.components.tokenization import BertTokenizer
-from canlpy.previous_models.knowledge_bert.modeling import BertForMaskedLM
+from canlpy.helpers.tokens import TAGME_TOKEN
 from typing import List,Dict,Tuple
 import re 
 import torch
 from torch import FloatTensor, Tensor
 from torch.nn import Embedding
+
+
 import tagme
 # Set the authorization token for subsequent calls.
-tagme.GCUBE_TOKEN = "3aaa1f03-b732-49a1-9328-7f86cdaa13df-843339462"
+tagme.GCUBE_TOKEN = TAGME_TOKEN
 
 NAME_TO_QID = "../kg_embed/entity_map.txt"
 QID_TO_EID = "../kg_embed/entity2id.txt"
