@@ -3,7 +3,7 @@
 ### Requirements:
 
 Pytorch  
-Python3 >=3.8  
+Python3 >=3.6.9
 
 ### Setup
 
