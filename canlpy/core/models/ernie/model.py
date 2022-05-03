@@ -366,10 +366,14 @@ class ErnieEncoder(nn.Module):
         for _ in range(config.num_hidden_layers-len(layers)):
             layers.append(copy.deepcopy(bert_layer))
         self.layer = nn.ModuleList(layers)
+        self.fp16 = bool(config.fp16)
 
     def forward(self, hidden_states, attention_mask, hidden_states_ent, attention_mask_ent, ent_mask, output_all_encoded_layers=True):
         all_encoder_layers = []
-        ent_mask = ent_mask.to(dtype=next(self.parameters()).dtype).unsqueeze(-1)
+        if not self.fp16:
+            ent_mask = ent_mask.to(dtype=torch.float32).unsqueeze(-1)
+        else:
+            ent_mask = ent_mask.to(dtype=torch.float16).unsqueeze(-1)
         # if self.training:
         #     ent_mask = ent_mask.half().unsqueeze(-1)
         # else:
@@ -462,12 +466,19 @@ class PreTrainedErnieModel(nn.Module):
                 mapping = json.load(file)
 
             for old_key,new_key in mapping.items():
-                if(new_key in model.state_dict()):
+                if (old_key in state_dict) and (new_key in model.state_dict()):
                     model_shape = model.state_dict()[new_key].shape
                     if(model_shape!=state_dict[old_key].shape):
                         logger.error(f'model.state_dict() {new_key}:{model_shape} != state_dict {old_key}:{state_dict[old_key].shape}')
-                        
-                state_dict[new_key] = state_dict.pop(old_key)
+       
+                    state_dict[new_key] = state_dict.pop(old_key)
+
+                elif (new_key in state_dict) or (new_key == old_key):
+                    # new_key already in state_dict => no mapping needed
+                    pass
+
+                else:
+                    logger.error(f'Unexpected mapping: {old_key} -> {new_key}')
 
         
         missing_keys,unexpected_keys =  model.load_state_dict(state_dict,strict=False)
@@ -527,6 +538,7 @@ class ErnieModel(PreTrainedErnieModel):
         #No need in every cases => might want to remove it
         self.pooler = BertPooler(config.hidden_size)
         self.apply(self.init_weights)
+        self.fp16 = bool(config.fp16)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, input_ent=None, ent_mask=None, output_all_encoded_layers=True):
         if attention_mask is None:
@@ -547,9 +559,16 @@ class ErnieModel(PreTrainedErnieModel):
         # positions we want to attend and -10000.0 for masked positions.
         # Since we are adding it to the raw scores before the softmax, this is
         # effectively the same as removing these entirely.
-        extended_attention_mask = extended_attention_mask.to(dtype=next(self.parameters()).dtype) # fp16 compatibility
+        if not self.fp16:
+            extended_attention_mask = extended_attention_mask.to(dtype=torch.float32) # fp16 compatibility
+        else:
+            extended_attention_mask = extended_attention_mask.to(dtype=torch.float16) # fp16 compatibility
         extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
-        extended_ent_mask = extended_ent_mask.to(dtype=next(self.parameters()).dtype) # fp16 compatibility
+
+        if not self.fp16:
+            extended_ent_mask = extended_ent_mask.to(dtype=torch.float32) # fp16 compatibility
+        else:
+            extended_ent_mask = extended_ent_mask.to(dtype=torch.float16) # fp16 compatibility
         extended_ent_mask = (1.0 - extended_ent_mask) * -10000.0
 
         embedding_output = self.embeddings(input_ids, token_type_ids)
